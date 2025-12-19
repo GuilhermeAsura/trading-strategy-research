@@ -1,0 +1,41 @@
+# raw data 
+data/raw/
+
+# processed data
+data/processed/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Resultados temporários (se forem muito grandes)
+# results/plots/
+# results/metrics/
+
+# Logs
+*.log
+
+# Configurações locais
+.env

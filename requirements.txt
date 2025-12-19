@@ -1,0 +1,27 @@
+# data manipulation and analysis
+pandas
+numpy
+scipy
+
+# technical analysis
+pandas-ta  # indicators library
+statsmodels  # For stationarity tests and statistics
+
+# Machine Learning
+scikit-learn
+xgboost
+optuna        # Essential for hyperparameter optimization
+
+# Backtesting e visualization
+vectorbt     # high-performance backtesting
+matplotlib
+plotly
+seaborn
+
+# Development and Notebook
+jupyter
+ipykernel
+
+
+# Utilities
+pyyaml  # reading the params.yaml file
