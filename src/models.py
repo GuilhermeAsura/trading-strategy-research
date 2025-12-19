@@ -5,6 +5,12 @@ from scipy.optimize import minimize
 from sklearn.metrics import classification_report, mean_absolute_error, r2_score
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+from pymoo.core.problem import ElementwiseProblem
+from pymoo.algorithms.moo.nsga2 import NSGA2
+from pymoo.optimize import minimize
+from pymoo.termination import get_termination
+from pymoo.operators.sampling.rnd import FloatRandomSampling
+from pymoo.optimize import minimize as pymoo_minimize
 
 class XGBoostTrainer:
     def __init__(self, df, features, target='label'):
@@ -184,3 +190,66 @@ class PortfolioOptimizer:
         
         self.weights = result.x
         return dict(zip(self.returns.columns, self.weights))
+        
+# genetic algotithm optimization with pymoo
+class PortfolioParetoProblem(ElementwiseProblem):
+    '''
+    objective: maximize profit and linearity using integer lot distribution
+    '''
+    def __init__(self, returns_matrix, budget=21):
+        self.returns = returns_matrix
+        self.budget = int(budget)
+        super().__init__(n_var=returns_matrix.shape[1], 
+                         n_obj=2, 
+                         xl=0.0, 
+                         xu=float(budget))
+
+    def _evaluate(self, x, out, *args, **kwargs):
+        # 1. integer lot allocation logic (largest remainder method)
+        # scale x to the budget
+        total_x = np.sum(x)
+        if total_x <= 0:
+            out["F"] = [1e12, 1e12]
+            return
+
+        exact_weights = x * (self.budget / total_x)
+        
+        # take the floor to get initial integer lots
+        integer_weights = np.floor(exact_weights).astype(int)
+        
+        # calculate remaining lots to reach exactly the budget
+        remaining_lots = self.budget - np.sum(integer_weights)
+        
+        # distribute remainder to those with the largest fractional parts
+        if remaining_lots > 0:
+            fractions = exact_weights - integer_weights
+            indices_to_add = np.argsort(fractions)[::-1][:int(remaining_lots)]
+            integer_weights[indices_to_add] += 1
+            
+        weights = integer_weights
+        
+        # 2. evaluate the integer portfolio
+        portfolio_daily = (self.returns * weights).sum(axis=1)
+        cumulative_equity = portfolio_daily.cumsum()
+        
+        total_profit = cumulative_equity.iloc[-1]
+        
+        # linearity (R2) of the integer-based curve
+        n = len(cumulative_equity)
+        t = np.arange(n).reshape(-1, 1)
+        y = cumulative_equity.values.reshape(-1, 1)
+        
+        reg = LinearRegression().fit(t, y)
+        r2 = reg.score(t, y)
+        
+        if total_profit <= 0:
+            out["F"] = [1e12, 1e12]
+        else:
+            out["F"] = [-total_profit, 1 - r2]
+
+def run_evolutionary_optimization(returns_df, budget=21, n_gen=200, pop_size=100):
+    if returns_df.empty: return None
+    problem = PortfolioParetoProblem(returns_df, budget=budget)
+    algorithm = NSGA2(pop_size=pop_size, sampling=FloatRandomSampling())
+    res = pymoo_minimize(problem, algorithm, get_termination("n_gen", n_gen), seed=42, verbose=False)
+    return res
