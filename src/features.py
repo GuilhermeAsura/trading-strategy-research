@@ -9,6 +9,7 @@ def generate_technical_features(df):
     Calculate log returns for statistical properties
     Log returns are better than simple returns for ml models
     '''
+    df = df.copy()
     df['log_ret'] = np.log(df['close'] / df['close'].shift(1))
     
     # distance from 200 period moving average (z-score)
@@ -18,18 +19,32 @@ def generate_technical_features(df):
     rolling_std = df['close'].rolling(window=window).std()
     df['z_score_200'] = (df['close'] - rolling_mean) / rolling_std
     
+    # distance from 9 period moving average (short-term stretch)
+    window_9 = 9
+    rolling_mean_9 = df['9_period']
+    rolling_std_9 = df['close'].rolling(window=window_9).std()
+    df['z_score_9'] = (df['close'] - rolling_mean_9) / rolling_std_9
+    
     # distance between fast and medium moving averages (9 vs 20)
     # positive means short term momentum is strong
     df['ma_spread'] = (df['9_period'] / df['20_period']) - 1
+    
+    # volatility (std dev of returns) for risk adjustment
+    df['volatility_20'] = df['log_ret'].rolling(window=20).std()
+    
+    # volatility ratio: are we in a period of expanding or contracting volatility?
+    df['vol_ratio'] = df['volatility_20'] / df['volatility_20'].rolling(window=100).mean()
+    
+    # price action features (since we dont have volume)
+    # relative range: high-low normalized by price
+    df['rel_range'] = (df['high'] - df['low']) / df['close']
     
     # stochastic oscillator momentum
     # change in k and d values over 3 days
     df['k_velocity'] = df['k'].diff(3)
     
-    # volatility (std dev of returns) for risk adjustment
-    df['volatility_20'] = df['log_ret'].rolling(window=20).std()
-    
     return df.dropna()
+
 
 def apply_triple_barrier_labeling(df, profit_pct=0.05, loss_pct=0.02, days=7):
     '''
