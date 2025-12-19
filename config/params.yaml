@@ -1,25 +1,63 @@
 project_name: "btc_quantitative_research"
 version: "1.0.0"
 
-data:
-  # paths relative to the project root
-  raw_path: "data/raw/BITSTAMP_BTCUSD, 1D - ISOtime.csv"
-  processed_path: "data/processed/btc_features_labeled.csv"
+# bitcoin trading strategy research parameters
+btc_trading:
+  data:
+    # paths relative to the project root
+    raw_path: "data/raw/BITSTAMP_BTCUSD, 1D - ISOtime.csv"
+    processed_path: "data/processed/btc_features_labeled.csv"
 
-features:
-  # the script uses these to identify columns or calculate new ones
-  moving_averages: [9, 20, 200]
-  z_score_window: 200  # for the long-term "cheapness" indicator
-  volatility_window: 20
+  features:
+    # the script uses these to identify columns or calculate new ones
+    moving_averages: [9, 20, 200]
+    z_score_window: 200  # for the long-term "cheapness" indicator
+    z_score_9_window: 9
+    volatility_window: 20
+    vol_ratio_long_window: 100
+    model_cols:
+      - volatility_20   
+      - rel_range       
+      - ma_spread       
+      - z_score_200     
+      - vol_ratio        
+      - k               
+      - d               
+      - z_score_9       
+      - k_velocity
 
-labeling:
-  # triple barrier method parameters
-  method: "triple_barrier"
-  barrier_days: 7      # how many days to wait for the result
-  profit_margin: 0.05  # % take profit (label 1)
-  stop_loss: 0.04      # % stop loss (label -1)
+  labeling:
+    # triple barrier method parameters
+    method: "triple_barrier"
+    barrier_days: 7      # how many days to wait for the result
+    profit_margin: 0.05  # % take profit (label 1)
+    stop_loss: 0.04      # % stop loss (label -1)
 
-backtest:
-  initial_capital: 10000
-  fees: 0.001          # 0.1% binance-style fee
-  slippage: 0.0005     # 0.05% expected slippage
+  backtest:
+    initial_capital: 10000
+    fees: 0.001          # 0.1% binance-style fee
+    slippage: 0.0005     # 0.05% expected slippage
+    confidence_threshold: 0.55
+
+# procurement optimization
+procurement_optimization:
+  data:
+    raw_path: "data/raw/procurement/spreadsheets/operacoes_intermediario_otimizado.csv"
+    processed_path: "data/processed/procurement_optimized.csv"
+    strategies_dir: "data/raw/procurement/spreadsheets/operacoes_intermediario_otimizado.csv"
+  features:
+    # parameters to find the optimized linear combination
+    model_cols: 
+      - 'tempo_operação'
+      - 'qtd_compra'
+      - 'qtd_venda'
+      - 'drawdown'
+      - 'ganho_max_'
+      - 'perda_max_'
+      - 'tet'
+    target: 'res__operação'
+  model_params:
+    fit_intercept: true
+  optimization:
+    budget: 25.0   
+    method: "SLSQP"
